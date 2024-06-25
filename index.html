@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Sharpener - Level Challenge</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        #game-area {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        input, button, select {
+            font-size: 18px;
+            padding: 10px;
+            margin: 5px;
+            width: calc(100% - 20px);
+        }
+        #score, #time, #level {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        #summary {
+            text-align: left;
+            margin-top: 20px;
+        }
+        #summary h2 {
+            text-align: center;
+        }
+        .summary-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .correct {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .incorrect {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        #level-select {
+            display: block;
+            margin: 20px auto;
+        }
+        .firecracker {
+            width: 50px;
+            height: 50px;
+            background: url('https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif') no-repeat center center;
+            background-size: cover;
+            margin: 0 5px;
+        }
+        .cheers {
+            width: 50px;
+            height: 50px;
+            background: url('https://media.giphy.com/media/l41lZxzroU33typuU/giphy.gif') no-repeat center center;
+            background-size: cover;
+            margin: 0 5px;
+        }
+        #firecracker-container,
+        #cheers-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .color-btn {
+        width: 80px;
+        height: 80px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        color: white;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Brain Sharpener</h1>
+        <select id="level-select">
+            <option value="1">Level 1 (Moderate)</option>
+            <option value="2">Level 2 (Hard)</option>
+            <option value="3">Level 3 (Very Hard)</option>
+        </select>
+        <select id="time-select">
+            <option value="30">30 seconds</option>
+            <option value="60" selected>60 seconds</option>
+            <option value="90">90 seconds</option>
+            <option value="120">120 seconds</option>
+        </select>
+        <button onclick="startGame()">Start Game</button>
+        <div id="level"></div>
+        <div id="game-area"></div>
+        <input type="text" id="user-input" placeholder="Your answer">
+        <button onclick="checkAnswer()">Submit</button>
+        <div id="score">Score: 0</div>
+        <div id="time">Time left: 60s</div>
+        <div id="summary"></div>
+        <div id="firecracker-container">
+            <div class="firecracker"></div>
+            <div class="firecracker"></div>
+            <div class="firecracker"></div>
+        </div>
+        <div id="cheers-container">
+            <div class="cheers"></div>
+            <div class="cheers"></div>
+            <div class="cheers"></div>
+        </div>
+    </div>
+
+    <script src="path/to/your/javascript.js"></script>
+</body>
+</html>
+
+
+        <script>
+       let score = 0;
+let timeLeft = 60;
+let currentGame;
+let answer;
+let timer;
+let gameHistory = [];
+let questionStartTime;
+let currentLevel = 1;
+let gameStarted = false;
+let lastGameType = null;
+
+const recentGameTypes = [];
+const maxRecentGames = 3; // Adjust this number to control how many recent games to remember thik
+
+const games = [
+    { name: 'Math', func: generateMathProblem },
+    { name: 'Memory', func: generateMemorySequence },
+    { name: 'Pattern', func: generatePattern },
+    { name: 'Reaction', func: generateReactionTest },
+    { name: 'Color Sequence', func: generateColorSequence },
+    { name: 'Logical Reasoning', func: generateLogicalReasoning },
+    { name: 'Verbal Reasoning', func: generateVerbalReasoning },
+    { name: 'Clickable Color Sequence', func: generateClickableColorSequence }
+    ];
+
+
+function startGame() {
+    if (gameStarted) {
+        if (!confirm("Are you sure you want to start a new game? Your current progress will be lost.")) {
+            return;
+        }
+    }
+    score = 0;
+    timeLeft = parseInt(document.getElementById('time-select').value);
+    gameHistory = [];
+    currentLevel = parseInt(document.getElementById('level-select').value);
+    updateScore();
+    updateTime();
+    updateLevel();
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => {
+        timeLeft--;
+        updateTime();
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            endGame();
+        }
+    }, 1000);
+    nextGame();
+    gameStarted = true;
+    document.getElementById('user-input').style.display = 'block';
+    document.querySelector('button[onclick="checkAnswer()"]').style.display = 'block';
+}
+function nextGame() {
+    let nextGameType;
+    do {
+        nextGameType = games[Math.floor(Math.random() * games.length)];
+    } while (recentGameTypes.includes(nextGameType.name));
+
+    recentGameTypes.push(nextGameType.name);
+    if (recentGameTypes.length > maxRecentGames) {
+        recentGameTypes.shift(); // Remove the oldest game type
+    }
+
+    lastGameType = nextGameType.name;
+    currentGame = nextGameType;
+    questionStartTime = Date.now();
+    currentGame.func();
+}
+
+function generateMathProblem() {
+    let num1, num2, operator;
+    switch (currentLevel) {
+        case 1:
+            num1 = Math.floor(Math.random() * 20) + 1;
+            num2 = Math.floor(Math.random() * 20) + 1;
+            operator = ['+', '-'][Math.floor(Math.random() * 2)];
+            break;
+        case 2:
+            num1 = Math.floor(Math.random() * 50) + 1;
+            num2 = Math.floor(Math.random() * 50) + 1;
+            operator = ['+', '-', '*'][Math.floor(Math.random() * 3)];
+            break;
+        case 3:
+            num1 = Math.floor(Math.random() * 100) + 1;
+            num2 = Math.floor(Math.random() * 100) + 1;
+            operator = ['+', '-', '*', '/'][Math.floor(Math.random() * 4)];
+            if (operator === '/') {
+                num1 = num2 * (Math.floor(Math.random() * 10) + 1);
+            }
+            break;
+    }
+    const problem = `${num1} ${operator} ${num2}`;
+    answer = parseFloat(eval(problem).toFixed(2)); //removing decimal 
+    document.getElementById('game-area').innerHTML = `Solve: ${problem}`;
+}
+
+function generateMemorySequence() {
+    const sequence = [];
+    const sequenceLength = currentLevel === 1 ? 4 : currentLevel === 2 ? 6 : 7;
+    for (let i = 0; i < sequenceLength; i++) {
+        sequence.push(Math.floor(Math.random() * 10));
+    }
+    document.getElementById('game-area').innerHTML = `Remember this sequence: ${sequence.join(' ')}`;
+    answer = sequence.join('');
+    setTimeout(() => {
+        document.getElementById('game-area').innerHTML = 'Enter the sequence';
+    }, currentLevel === 1 ? 3000 : currentLevel === 2 ? 2000 : 1000);
+}
+
+function generatePattern() {
+    const patterns = {
+        1: ['AABAA', 'ABCABC', 'AABBCC'],
+        2: ['AABABC', 'ABCDABCD', 'AABBCCDD'],
+        3: ['AABABCABCD', 'ABCDEABCDE', 'AABBCCDDEE']
+    };
+    const pattern = patterns[currentLevel][Math.floor(Math.random() * patterns[currentLevel].length)];
+    const missingIndices = [];
+    for (let i = 0; i < currentLevel; i++) {
+        let index;
+        do {
+            index = Math.floor(Math.random() * pattern.length);
+        } while (missingIndices.includes(index));
+        missingIndices.push(index);
+    }
+    answer = missingIndices.map(index => pattern[index]).join('');
+    let displayPattern = pattern.split('');
+    missingIndices.forEach(index => displayPattern[index] = '_');
+    document.getElementById('game-area').innerHTML = `Complete the pattern: ${displayPattern.join(' ')}`;
+}
+function generateClickableColorSequence() {
+    const colors = ['red', 'green', 'blue', 'yellow'];
+    const sequenceLength = currentLevel === 1 ? 4 : currentLevel === 2 ? 5 : 6;
+    let sequence = [];
+    for (let i = 0; i < sequenceLength; i++) {
+        sequence.push(colors[Math.floor(Math.random() * colors.length)]);
+    }
+    answer = sequence.join(',');
+
+    document.getElementById('game-area').innerHTML = `
+        <p>Click the colors in the order they appeared:</p>
+        ${colors.map(color => `<button class="color-btn" style="background-color:${color};" onclick="selectColor('${color}')">${color}</button>`).join('')}
+        <p id="selected-colors"></p>
+    `;
+
+    // Show the sequence briefly
+    const sequenceDisplay = document.createElement('p');
+    sequenceDisplay.textContent = `Remember this sequence: ${sequence.join(', ')}`;
+    document.getElementById('game-area').prepend(sequenceDisplay);
+    setTimeout(() => sequenceDisplay.remove(), currentLevel === 1 ? 3000 : currentLevel === 2 ? 2000 : 1000);
+}
+
+let selectedColors = [];
+
+function selectColor(color) {
+    selectedColors.push(color);
+    document.getElementById('selected-colors').textContent = `Selected: ${selectedColors.join(', ')}`;
+    if (selectedColors.length === answer.split(',').length) {
+        checkClickableColorSequence();
+    }
+}
+
+function checkClickableColorSequence() {
+    const userAnswer = selectedColors.join(',');
+    const timeTaken = Date.now() - questionStartTime;
+    let marks = 0;
+    let isCorrect = userAnswer === answer;
+
+    if (isCorrect) {
+        marks = 5;
+        score += marks;
+        updateScore();
+        showFirecrackerEffect();
+    }
+
+    gameHistory.push({
+        type: 'Clickable Color Sequence',
+        question: 'Click the colors in the correct order',
+        answer: answer,
+        userAnswer: userAnswer,
+        timeTaken: timeTaken,
+        marks: marks,
+        isCorrect: isCorrect
+    });
+
+    selectedColors = [];
+    nextGame();
+}
+
+function generateReactionTest() {
+    document.getElementById('game-area').innerHTML = 'Click when the screen turns green';
+    document.getElementById('game-area').style.backgroundColor = 'red';
+    const delay = Math.random() * (currentLevel === 1 ? 3000 : currentLevel === 2 ? 2000 : 1000) + 500;
+    setTimeout(() => {
+        const startTime = Date.now();
+        document.getElementById('game-area').style.backgroundColor = 'green';
+        document.getElementById('game-area').onclick = () => {
+            const reactionTime = Date.now() - startTime;
+            document.getElementById('game-area').innerHTML = `Your reaction time: ${reactionTime}ms`;
+            document.getElementById('game-area').style.backgroundColor = '';
+            document.getElementById('game-area').onclick = null;
+            let marks = 0;
+            if (reactionTime < (currentLevel === 1 ? 500 : currentLevel === 2 ? 400 : 300)) {
+                marks = 5;
+            } else if (reactionTime < (currentLevel === 1 ? 1000 : currentLevel === 2 ? 800 : 600)) {
+                marks = 3;
+            } else {
+                marks = 1;
+            }
+            score += marks;
+            updateScore();
+            gameHistory.push({
+                type: 'Reaction',
+                question: 'Click when green',
+                answer: 'N/A',
+                userAnswer: `${reactionTime}ms`,
+                timeTaken: reactionTime,
+                marks: marks,
+                isCorrect: true // Always correct for reaction test
+            });
+            setTimeout(nextGame, 2000);
+        };
+    }, delay);
+}
+
+function generateColorSequence() {
+    const colors = ['red', 'green', 'blue', 'yellow'];
+    const sequenceLength = currentLevel === 1 ? 4 : currentLevel === 2 ? 5 : 6;
+    let sequence = [];
+    for (let i = 0; i < sequenceLength; i++) {
+        sequence.push(colors[Math.floor(Math.random() * colors.length)]);
+    }
+    document.getElementById('game-area').innerHTML = `Remember this color sequence: ${sequence.join(', ')}`;
+    answer = sequence.join(',');
+    setTimeout(() => {
+        document.getElementById('game-area').innerHTML = 'Enter the color sequence';
+    }, currentLevel === 1 ? 3000 : currentLevel === 2 ? 2000 : 1000);
+}
+
+function generateLogicalReasoning() {
+    const questions = {
+        1: [
+            { q: 'If all Bloops are Razzies and all Razzies are Lazzies, are all Bloops definitely Lazzies?', a: 'yes' },
+            { q: 'If some Snarks are Blarks and some Blarks are Plarks, are all Snarks definitely Plarks?', a: 'no' }
+        ],
+        2: [
+            { q: 'If all Trups are Hups and no Hups are Cups, are all Trups definitely Cups?', a: 'no' },
+            { q: 'If some Blips are Dips and all Dips are Rips, are some Blips definitely Rips?', a: 'yes' }
+        ],
+        3: [
+            { q: 'If all Krups are Mups and all Mups are Lups, and no Lups are Pups, are all Krups definitely Pups?', a: 'no' },
+            { q: 'If some Zaps are Vaps and all Vaps are Caps, and no Caps are Faps, are some Zaps definitely Faps?', a: 'no' }
+        ]
+    };
+    const question = questions[currentLevel][Math.floor(Math.random() * questions[currentLevel].length)];
+    document.getElementById('game-area').innerHTML = question.q;
+    answer = question.a;
+}
+
+function generateVerbalReasoning() {
+    const questions = {
+        1: [
+            { q: 'Find the odd one out: apple, banana, orange, car', a: 'car' },
+            { q: 'Find the synonym: quick, fast, slow, speed', a: 'fast' }
+        ],
+        2: [
+            { q: 'Find the antonym: love, hate, enjoy, like', a: 'hate' },
+            { q: 'Which word can be associated with: bed, sleep, night, run', a: 'run' }
+        ],
+        3: [
+            { q: 'Which word can be associated with: school, study, teacher, party', a: 'party' },
+            { q: 'Find the odd one out: cat, dog, lion, bird', a: 'bird' }
+        ]
+    };
+    const question = questions[currentLevel][Math.floor(Math.random() * questions[currentLevel].length)];
+    document.getElementById('game-area').innerHTML = question.q;
+    answer = question.a;
+}
+
+function checkAnswer() {
+    const userAnswer = document.getElementById('user-input').value.trim().toLowerCase();
+    if (currentGame.name !== 'Reaction') {
+        const timeTaken = Date.now() - questionStartTime;
+        let marks = 0;
+        let isCorrect = false;
+        if (currentGame.name === 'Color Sequence') {
+            const userColors = userAnswer.replace(/[,\s]+/g, ',').split(',');
+            const correctColors = answer.split(',');
+            isCorrect = userColors.length === correctColors.length && 
+                        userColors.every((color, index) => color === correctColors[index]);
+        } else {
+            isCorrect = userAnswer === answer.toString();
+        }
+        // Revoing decimal
+        const numericUserAnswer = parseFloat(userAnswer);
+        const numericCorrectAnswer = parseFloat(answer);
+        if (userAnswer === answer.toString()) {
+            marks = 5;
+            score += marks;
+            isCorrect = true;
+            updateScore();
+            showFirecrackerEffect();
+        }
+        gameHistory.push({
+            type: currentGame.name,
+            question: document.getElementById('game-area').innerHTML,
+            answer: answer,
+            userAnswer: userAnswer,
+            timeTaken: timeTaken,
+            marks: marks,
+            isCorrect: isCorrect
+        });
+        document.getElementById('user-input').value = '';
+        nextGame();
+    }
+}
+
+function updateScore() {
+    document.getElementById('score').textContent = `Score: ${score}`;
+}
+
+function updateTime() {
+    document.getElementById('time').textContent = `Time left: ${timeLeft}s`;
+}
+
+function updateLevel() {
+    const levelNames = ['Moderate', 'Hard', 'Very Hard'];
+    document.getElementById('level').textContent = `Current Level: ${currentLevel} (${levelNames[currentLevel - 1]})`;
+}
+
+function endGame() {
+    clearInterval(timer);
+    document.getElementById('game-area').innerHTML = `Game Over! Final Score: ${score}`;
+    document.getElementById('user-input').style.display = 'none';
+    document.querySelector('button[onclick="checkAnswer()"]').style.display = 'none';
+    gameStarted = false;
+    showCheersEffect();
+
+    // Generate summary
+    let summaryHTML = '<h2>Game Summary</h2>';
+    gameHistory.forEach((game, index) => {
+        const resultClass = game.isCorrect ? 'correct' : 'incorrect';
+        summaryHTML += `
+            <div class="summary-item ${resultClass}">
+                <strong>Question ${index + 1} (${game.type}):</strong> ${game.question}<br>
+                Correct Answer: ${game.answer}<br>
+                Your Answer: ${game.userAnswer}<br>
+                Time Taken: ${(game.timeTaken / 1000).toFixed(2)}s<br>
+                Marks: ${game.marks}
+            </div>
+        `;
+    });
+    document.getElementById('summary').innerHTML = summaryHTML;
+}
+
+function showFirecrackerEffect() {
+    const firecrackerContainer = document.getElementById('firecracker-container');
+    firecrackerContainer.style.display = 'flex';
+    setTimeout(() => {
+        firecrackerContainer.style.display = 'none';
+    }, 2000); // Display firecrackers for 2 seconds
+}
+
+function showCheersEffect() {
+    const cheersContainer = document.getElementById('cheers-container');
+    cheersContainer.style.display = 'flex';
+    setTimeout(() => {
+        cheersContainer.style.display = 'none';
+    }, 3000); // Display cheers for 3 seconds
+}
+
+document.getElementById('user-input').addEventListener('keyup', function(event) {
+    if (event.key === 'Enter') {
+        checkAnswer();
+    }
+});
+
+// Hide game elements initially
+document.getElementById('user-input').style.display = 'none';
+document.querySelector('button[onclick="checkAnswer()"]').style.display = 'none';
+
+    </script>
+
